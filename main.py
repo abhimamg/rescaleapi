@@ -1,6 +1,6 @@
 import requests
 from rich import print as rprint
-import json
+impormlflow1
 
 api_key="ed7021746c2ce248fc615dadd14830f49dee9510"
 
@@ -39,17 +39,32 @@ resp=requests.post(
            'Authorization': f'Token {api_key}'}
 )
 
-
-
-job_id="kmYfEc"
-requests.post(
-  f'https://platform.rescale.com/api/v2/jobs/{job_id}/submit/',
-           headers={'Authorization': f'Token {api_key}'} )
-
-
 y = json.loads(resp.content)
 rprint(y)
 with open("jobs.txt", "w") as f:
     f.write(str(y))
+
+
+# job_id=y["id"]
+# resp=requests.post(
+#   f'https://platform.rescale.com/api/v2/jobs/{job_id}/submit/',
+#            headers={'Authorization': f'Token {api_key}'} )
+
+
+resp = requests.get(
+  'https://platform.rescale.com/api/v2/jobs/tJLzXb',
+           headers={'Authorization': f'Token {api_key}'} )
+
+
+
+rprint(resp.content)
+y = json.loads(resp.content)
+rprint(y)
+with open("jobs.txt", "a") as f:
+    f.write("\n=================\n")
+    f.write(str(y))
+
+
+
 
 
