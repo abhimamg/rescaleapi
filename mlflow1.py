@@ -45,7 +45,7 @@ class Job:
           },
 
           headers={'Content-Type': 'application/json',
-                   'Authorization': f'Token {Job.api_key}'}
+                   'Authorization': f'Token {api_key}'}
         )
         self.create_content=json.loads(resp.content)
         self.job_id=self.create_content["id"]
@@ -80,9 +80,9 @@ class Job:
                 params={'lines': lines}
             )
             self.tail_content=json.loads(resp.content)
-            return self.tail_content["lines"]
+            print(*self.tail_content["lines"], sep = "\n")
         else:
-            return "Job not started"
+            rprint("Job not started")
     
     def delete(self):
         requests.post(

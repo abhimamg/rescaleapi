@@ -1,0 +1,15 @@
+artifact_uri: file:///Users/abhi/Documents/Projects/test-rescaleapi/mlruns/0/f28133b823464f0495560971f30ece6f/artifacts
+end_time: 1643849379330
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+name: ''
+run_id: f28133b823464f0495560971f30ece6f
+run_uuid: f28133b823464f0495560971f30ece6f
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1643849379310
+status: 3
+tags: []
+user_id: abhi
