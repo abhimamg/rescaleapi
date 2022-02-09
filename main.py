@@ -1,6 +1,12 @@
 import requests
 from rich import print as rprint
 import json
+from main import Job
+import time
+from IPython.display import clear_output
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 
 class Job:
@@ -94,4 +100,24 @@ class Job:
         requests.delete(
             f'https://platform.rescale.com/api/v2/files/{self.storage_id}/',
             headers={'Authorization': f'Token {Job.api_key}'} )
-        
+
+
+def plot_progress():
+    for _ in range(200):
+    plt.figure(figsize=(11,4))
+    x=job.tail(lines=1000)
+    y=pd.DataFrame([i.split() for i in x[5:]]).apply(pd.to_numeric, errors="ignore")
+    clear_output(wait=True)
+    (y[7]*100).plot(label="")
+
+
+    tail=y.tail(1).values.flatten()
+    plt.scatter(len(y), tail[7]*100, color="b",
+            label=f'Step: {int(tail[0])}\nProgress: {round(tail[7]*100, 2)}%')  
+    plt.yticks(np.arange(0, 125, 25))
+    plt.xlabel("Increments")
+    plt.ylabel("Progress [%]")
+
+    plt.legend()
+    plt.show()
+    time.sleep(2)
