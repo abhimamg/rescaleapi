@@ -7,4 +7,5 @@ RunsOn: Rescale
     Cores: 1
     AbaqusVersion: 2020
 
-InputFiles: Files/
+InputFiles: input/
+

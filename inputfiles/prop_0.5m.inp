@@ -1,0 +1,373 @@
+*HEADING
+Abigail Equivalent Pipe Validation
+**
+*****************************************************
+*** MODEL USES SI UNITS: m, kg, s, N, Pa, deg C *****
+*****************************************************
+**
+*****************************************************
+** All USER input goes here:
+*****************************************************
+*PARAMETER
+**
+KP_START		=0.1		## [km]	 KP to start the model
+KP_END			=0.4		## [km]	 KP to end the model
+MINIMUM_DEPTH		=-86.7		## [m]	 Minimum water depth for the KP range
+**
+DAMPING			= 0.1		## [-]	 Damping for the dash-pot elements to facilitate lay-down in STEP1 
+WEIGHT_INSTALLATION	=993.1	## [N/m] Submerged weight during survey (Assumed Flooded)
+WEIGHT_OPERATION	=841.4	## [N/m] Submerged weight during operation (Assumed HE Contents Density)
+**
+MAX_UPLIFT		=80.50E3		## [N/m] Maximum uplift resistance for the vertical 		(calibrated)
+**
+** ## OPERATIONAL LOADS ARE DEFINED AS "DELTA" FROM INSTALLATION TO OPERATION!
+SRA			=1.00		## [-]   The SRA Load Factor
+DELTA_T	=140	## [degC] CHANGE IN TEMPERATURE (excluding safety factor) #TBC Confirm with UHB Analysis
+**
+OD			=0.2731		## [m]   STEEL PIPE OUTSIDE DIAMETER
+WT			=0.111		## [m] 	 STEEL PIPE WALLL THICKNESS
+**
+YOUNG_MODULUS		=207E9		## [Pa]  STEEL PIPE YOUNG MODULUS
+POISSON_RATIO		=0.3		## [-]   STEEL PIPE POISSON RATIO
+ALPHA			=11.7E-6	## [1/K] STEEL PIPE THERMAL EXPANSION COEFFICIENT
+**
+**
+*****************************************************
+** processing input parameters **********************
+*****************************************************
+** DO NOT MODIFY BEYOND THIS POINT!!!!!!!!!!!!!!!!!!!
+*****************************************************
+**
+** metre point (MP) index based on user defined KP range
+MP_START=int(KP_START*1000)
+MP_END  =int(KP_END*1000)
+** pipeline node indexes for the specified KP range
+NODE_START     =int(1000000+MP_START)
+NODE_NEXT      =int(NODE_START + 1)
+NODE_END       =int(1000000+MP_END)
+NUMBER_OF_NODES=int(NODE_END-NODE_START+1)
+** pipeline element ID = 1,000,000 + MP index
+ELEMENT_START     =int(1000000+MP_START)
+ELEMENT_END       =int(1000000+MP_END)
+NUMBER_OF_ELEMENTS=int(ELEMENT_END-ELEMENT_START)
+** dash-pot element ID = 2,000,000 + MP index
+DAMPER_START     =int(2000000+MP_START)
+** AXIAL SOIL RESISTANCE ELELEMT ID = 3,000,000 + MP index
+AXIAL_START	 = int(3000000+MP_START)
+** VERTICAL SOIL RESISTANCE ELELEMT ID = 4,000,000 + MP index
+VERTICAL_START	 = int(4000000+MP_START)
+** EXTERNAL PRESSURE (NO SRA APPLIED!):
+FACTORED_PE=-9.807*1025*MINIMUM_DEPTH
+** FACTORED TEMPERATURE DIFFERENTIAL
+FACTORED_TEMPERATURE=DELTA_T*SRA
+** STEEL PIPE INTERNAL DIAMETER
+ID=OD-2*WT
+**
+** STEEL PIPE OUTSIDE RADIUS
+OR=OD/2.
+** 10 times installation weight (contact overclosure penalty)
+WEIGHT_INSTALLATION_10=10*WEIGHT_INSTALLATION
+**
+*****************************************************
+** GENERATE NODES
+*****************************************************
+**
+** DEFINE THE NODE CONTROLLING THE CONTACT SURFACE
+*NODE, NSET=CONTROL_NODES
+ 1,   <MP_START> , <MINIMUM_DEPTH>, 0.0
+ 2,   <MP_START> , <MINIMUM_DEPTH>, 0.0
+**
+** DEFINE THE NODES FOR THE PIPELINE (at 1m interval)
+*NODE, NSET=PIPELINE
+ <NODE_START>, <MP_START> , <MINIMUM_DEPTH>, 0.0
+ <NODE_END>  , <MP_END>   , <MINIMUM_DEPTH>, 0.0
+**
+*NGEN, NSET=PIPELINE
+ <NODE_START>, <NODE_END>, 1
+**
+*****************************************************
+** GENERATE PIPELINE ELEMENTS
+*****************************************************
+**
+** PIPELINE ELEMENTS
+*ELEMENT, TYPE=PIPE21H, ELSET=PIPELINE
+ <ELEMENT_START>, <NODE_START>, <NODE_NEXT>
+*ELGEN,ELSET=PIPELINE
+ <ELEMENT_START>, <NUMBER_OF_ELEMENTS>
+**
+*****************************************************
+** GENERATE DASH-POT ELEMENTS
+*****************************************************
+**
+** DAMPING ELEMENTS
+*ELEMENT, TYPE=DASHPOT1, ELSET=DAMPERS
+ <DAMPER_START>, <NODE_START>
+*ELGEN,ELSET=DAMPERS
+ <DAMPER_START>, <NUMBER_OF_NODES>
+**
+*****************************************************
+** GENERATE SOIL RESISTANCE ELEMENTS
+*****************************************************
+**
+** AXIAL SOIL SPRINGS
+*ELEMENT, TYPE=SPRING1, ELSET=AXIAL_SOIL_SPRINGS
+ <AXIAL_START>, <NODE_START>
+*ELGEN,ELSET=AXIAL_SOIL_SPRINGS
+ <AXIAL_START>, <NUMBER_OF_NODES>
+**
+**
+** VERTICAL SOIL SPRINGS
+*ELEMENT, TYPE=SPRING1, ELSET=VERTICAL_SOIL_SPRINGS
+ <VERTICAL_START>, <NODE_START>
+*ELGEN,ELSET=VERTICAL_SOIL_SPRINGS
+ <VERTICAL_START>, <NUMBER_OF_NODES>
+**
+**
+*****************************************************
+** ASSIGN GEOMETRIC AND MATERIAL PROPERTIES TO THE PIPELINE ELEMENTS
+*****************************************************
+**
+*BEAM SECTION, ELSET=PIPELINE, MATERIAL=STEEL, SECTION=PIPE
+ <OR>, <WT>
+
+*MATERIAL, NAME=STEEL
+*ELASTIC, TYPE=ISOTROPIC
+ <YOUNG_MODULUS>, <POISSON_RATIO>
+**
+*EXPANSION, TYPE=ISO
+ <ALPHA>
+**
+**
+*****************************************************
+** ASSIGN  MATERIAL PROPERTIES TO THE DASH-POT ELEMENTS
+*****************************************************
+**
+** DEFINE THE DAMPING COEFFICIENT FOR THE DASH-POTS
+** THIS IS GRADUALLY REDUCED TO AS LOW AS POSSIBLE, ALLOWING STEP 1 TO CONVERGE
+** STEP2 (REMOVAL OF THE DASHPOTS) SHOULD NOT LEAD TO ANY CHANGE IN PIPELINE SHAPE
+**
+*DASHPOT, ELSET=DAMPERS
+2
+<DAMPING>
+**
+*****************************************************
+** ASSIGN  MATERIAL PROPERTIES TO THE SOIL SPRING ELEMENTS
+*****************************************************
+**
+** AXIAL SOIL SPRINGS:
+*SPRING, ELSET=AXIAL_SOIL_SPRINGS, NONLINEAR, DEPENDENCIES=1
+ 1
+************************************************** pipe with MINIMUM cover
+ -1470.,	-0.008,		,	5355
+  0.0, 		0.0,       	,	5355
+  1470.,	0.008,    	,	5355
+**
+************************************************** pipe with MAXIMUM cover
+ -4050.,	-0.008 ,    	,	63931
+  0.0, 		0.0,      	,	63931
+  4050., 	0.008,    	,	63931
+**************************************************************************
+**
+**
+** VERTICAL SOIL SPRINGS:
+*SPRING, ELSET=VERTICAL_SOIL_SPRINGS, NONLINEAR, DEPENDENCIES=1
+2
+****************************************
+-66716.58	,	-0.036,,5355
+****************************************
+ 0.0000000000	,	 0.000,,5355
+****************************************
+ 5355	,	 0.020,,5355
+ 1.E6		,	 0.100,,5355
+****************************************
+****************************************
+-79481.19	,	-0.036,,63931
+****************************************
+ 0.0000000000	,	 0.000,,63931
+ 63931	,	 0.020,,63931
+ 1.E6		,	 0.100,,63931
+****************************************
+**
+**
+*****************************************************
+** Define THE CONTACT SURFACE & ITS PROPERTIES
+*****************************************************
+**
+*SURFACE, NAME=PIPELINE, TYPE=NODE
+ PIPELINE,1
+**
+** IMPORT SMOOTHED PIPELINE PROFILE
+*SURFACE, NAME=SMOOTHED-PIPE-PROFILE, TYPE=SEGMENTS
+*INCLUDE, INPUT=prop_0.50m.txt
+*RIGID BODY, ANALYTICAL SURFACE=SMOOTHED-PIPE-PROFILE, REF NODE=1
+*CONTACT PAIR, INTERACTION=SMOOTHED-PIPE-PROFILE, TYPE=NODE TO SURFACE
+ PIPELINE, SMOOTHED-PIPE-PROFILE
+*SURFACE INTERACTION, NAME=SMOOTHED-PIPE-PROFILE
+*SURFACE BEHAVIOR, PRESSURE-OVERCLOSURE=EXPONENTIAL
+ 0.0001, <WEIGHT_INSTALLATION>
+*Friction
+ 0.0
+**
+*SURFACE, NAME=SMOOTHED-PIPE-PROFILE2, TYPE=SEGMENTS
+*INCLUDE, INPUT=prop_0.50m.txt
+*RIGID BODY, ANALYTICAL SURFACE=SMOOTHED-PIPE-PROFILE2, REF NODE=2
+*CONTACT PAIR, INTERACTION=SMOOTHED-PIPE-PROFILE2, TYPE=NODE TO SURFACE
+ PIPELINE, SMOOTHED-PIPE-PROFILE2
+*SURFACE INTERACTION, NAME=SMOOTHED-PIPE-PROFILE2
+*SURFACE BEHAVIOR, PRESSURE-OVERCLOSURE=TABULAR
+                   0.0   , -20
+ <WEIGHT_INSTALLATION>   , 0.0
+ <WEIGHT_INSTALLATION_10>, 0.1
+*Friction
+ 0.0
+**
+**
+**
+*****************************************************
+** DEFINE AMPLIDUDES
+*****************************************************
+**
+*AMPLITUDE, NAME=STEP, DEFINITION=TABULAR, TIME=STEP TIME, VALUE=RELATIVE
+ 0, 1, 1, 1
+*AMPLITUDE, NAME=RAMP, DEFINITION=TABULAR, TIME=STEP TIME, VALUE=RELATIVE
+ 0, 0, 1, 1
+**
+*****************************************************
+**SET INITIAL CONDITIONS (DO NOT MODIFY)
+*****************************************************
+*INITIAL CONDITIONS, TYPE=TEMPERATURE
+ PIPELINE, 0.0
+**
+*INITIAL CONDITIONS, TYPE=FIELD, VARIABLE=1
+ PIPELINE, <MAX_UPLIFT>
+************************************************************************************
+************************************************************************************
+************************************************************************************
+**
+*****************************************************
+**----------THE SOLUTION-----------------------------
+*****************************************************
+**
+*****************************************************
+** STEP 1: APPLY EXTERNAL PRESSURE
+*****************************************************
+**
+*STEP, NAME=ENGAGE_SEABED1, NLGEOM=YES, UNSYMM=YES, INC=500, AMPLITUDE=RAMP
+*STATIC, STABILIZE=0.00001
+ 0.05, 1.0, 1.0E-8, 0.1
+**
+** ALLOW MORE ITERATIONS TO CONVERGE
+*CONTROLS, PARAMETERS=TIME INCREMENTATION
+ , , , , , , 50,10
+**
+** REMOVE SOIL SPRINGS
+*MODEL CHANGE, ACTIVATE
+*MODEL CHANGE, REMOVE, TYPE=ELEMENT
+ AXIAL_SOIL_SPRINGS, VERTICAL_SOIL_SPRINGS
+**
+** FIX THE CONTACT SURFACE IN SPACE
+** RESTRAIN AXIALLY ONE POINT ON PIPELINE TO ELIMINATE RIGID BODY MOTION
+*BOUNDARY, OP=NEW, FIXED
+            1, 1, 6
+            2, 1, 6
+ <NODE_START>, 1, 1
+** 
+** APPLY EXTERNAL (AMBIENT) PRESSURE
+*DLOAD, OP=NEW, AMPLITUDE=STEP
+ PIPELINE , PE, <FACTORED_PE>, <OD>
+*DLOAD, OP=NEW, AMPLITUDE=RAMP
+ PIPELINE , PY, -<WEIGHT_INSTALLATION>
+**
+**  REQUEST OUTPUT:
+*OUTPUT, FIELD, VARIABLE=PRESELECT, FREQUENCY=1000
+*ELEMENT OUTPUT, ELSET=PIPELINE, POSITION=INTEGRATION POINTS, VARIABLE=PRESELECT
+ ESF1, SF, SE, S
+**
+*ELEMENT OUTPUT, ELSET=VERTICAL_SOIL_SPRINGS, POSITION=INTEGRATION POINTS, VARIABLE=PRESELECT
+**
+*NODE OUTPUT , NSET=PIPELINE , VARIABLE=PRESELECT
+ COORD
+**
+*END STEP
+**
+**
+*****************************************************
+** STEP 2: LOWER THE PENALTY CONTACT SURFACE
+*****************************************************
+**
+*STEP, NAME=ENGAGE_SEABED2, NLGEOM=YES, UNSYMM=YES, INC=200, AMPLITUDE=RAMP
+*STATIC, STABILIZE=0.000001
+ 0.01, 1.0, 1.0E-8, 0.5
+**
+*BOUNDARY, OP=NEW, FIXED
+            1, 1, 6
+            2, 1, 1
+            2, 3, 6
+   <NODE_END>, 1, 1
+**
+*BOUNDARY, OP=NEW, TYPE=VELOCITY
+            2, 2, 2, -40
+**
+*END STEP
+**
+*****************************************************
+** STEP 3: ADDITIONAL STEP TO ENSURE SOLUTION IS FULLY CONVERGED
+*****************************************************
+**
+*STEP, NAME=ENGAGE_SEABED3, NLGEOM=YES, UNSYMM=YES, INC=10, AMPLITUDE=STEP
+*STATIC
+ 0.5, 1.0, 0.1, 0.5
+**
+*MODEL CHANGE, REMOVE, TYPE=ELEMENT
+ DAMPERS
+**
+**
+*END STEP
+**
+*****************************************************
+** STEP 4: APPLY SOIL SPRINGS
+*****************************************************
+**
+*STEP, NAME=SOIL_SPRINGS, NLGEOM=YES, UNSYMM=YES, INC=100, AMPLITUDE=RAMP
+*STATIC
+ 0.5, 1.0, 0.01, 0.5
+**
+*BOUNDARY, OP=NEW, FIXED
+            1, 1, 6
+            2, 1, 6
+** FIX BOTH MODEL ENDS, OR JUST ONE END IF CONSIDERING PARTIALLY RESTRAINED REGION
+   <NODE_END>, 1, 6
+ <NODE_START>, 1, 6
+**
+*MODEL CHANGE, REMOVE, TYPE=CONTACT PAIR
+ PIPELINE, SMOOTHED-PIPE-PROFILE
+ PIPELINE, SMOOTHED-PIPE-PROFILE2
+**
+*MODEL CHANGE, ADD, TYPE=ELEMENT
+ AXIAL_SOIL_SPRINGS, VERTICAL_SOIL_SPRINGS
+**
+*END STEP
+**
+**
+*****************************************************
+** STEP 5: APPLY OPERATIONAL LOADING ****************
+*****************************************************
+**
+*STEP, NAME=LOAD, NLGEOM=YES, UNSYMM=YES, INC=100, AMPLITUDE=RAMP
+*STATIC
+ 0.2, 1.0, 0.000001, 0.2
+**
+**
+** CHANGE SUBMERGED PIPELINE WEIGHT FROM INSTALLATION TO OPERATIONAL
+*DLOAD, OP=MOD, AMPLITUDE=STEP
+ PIPELINE , PY, -<WEIGHT_OPERATION>
+**
+**
+**
+** APPLY THE FACTORED TEMPERATURE DIFFERENCE FROM INSTALLATION TO OPERATION
+*TEMPERATURE, AMPLITUDE=RAMP
+ PIPELINE , <FACTORED_TEMPERATURE>
+**
+**
+*END STEP
+**
