@@ -15,11 +15,14 @@ def main(yml = "input.yml"):
     api_key = yml['API Key']
     inp_files = yml['Input Files']
     command = yml['Command']
+    job_id = "ere"
 
     # storage = upload(inp_files, api_key)
     # job_id = create(job_name, command, abq_ver, ncores, machine, storage, api_key)
     # submit(job_id, api_key)
     cwd = os.getcwd()
+    os.system("git add .")
+    os.system(f"git commit -m '{job_id}'")
     return cwd
 
 def submit(job_id, api_key):
