@@ -1,0 +1,753 @@
+**** HAMLET
+**** Lateral Buckling PIP + MLP Beam Elements Model + ROUGE BUCKLE MODEL
+****
+**** author: Abhishek Mamgain
+**** date: 21/03/2022
+****
+*PREPRINT, ECHO=NO, MODEL=NO, HISTORY=NO, PARVALUES=YES
+*CONSTRAINT CONTROLS, PRINT=NO
+**
+*PARAMETER
+*INCLUDE, INPUT=02_material.inc
+*INCLUDE, INPUT=01_settings.inc
+*INCLUDE, INPUT=03_seabed.inc
+*INCLUDE, INPUT=06_model_definition.inc
+*INCLUDE, INPUT=04_cent_springs.inc
+*INCLUDE, INPUT=05_interactions.inc
+*INCLUDE, INPUT=07_trawl.inc
+**
+** # Model Setup
+*ORIENTATION, NAME=global_y, DEFINITION=COORDINATES, SYSTEM=RECTANGULAR
+ 0.0, 100.0, 0.0, 100.0, 0.0, 0.0
+ 1, 0.
+** 
+*AQUA
+ <water_elevation>, 0., <grav_amp>, <water_density>
+**
+*INITIAL CONDITIONS, TYPE=TEMPERATURE
+ cp_b_nds, <cp_temp_ini>
+ fl_b_nds, <fl_temp_ini>
+**
+**
+**
+**............................................... =======================================
+************************************************* --- LOAD HISTORY DEFINITION SECTION ---
+**............................................... =======================================
+**
+** ---------------
+** --- STEP 01 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1000, NLGEOM=YES, UNSYMM=YES
+=== CREATE HOOS FOR RCM ===
+*STATIC, STABILIZE=1e-7
+0.1, 1.0, 1.e-15, 1.0
+**
+************************************************* (O1) CONTROLS
+*CONTROLS, RESET
+*CONTROLS, ANALYSIS=DISCONTINUOUS 
+***CONTROLS, PARAMETERS=FIELD, FIELD=ROTATION
+** , 0.03, , , , , , 1e-06
+*CONTROLS,PARAMETERS=TIME INCREMENTATION
+ 10, 11, , , , , ,16, , , , , 
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+*CONTROL, ANALYSIS=DISCONTINUOUS
+**
+************************************************* (0) REMOVE SEABED
+*MODEL CHANGE, REMOVE, TYPE=CONTACT
+ cp_b_el_cont_noRC,      seabed_b_rs
+**cp_b_el_cont_RC,      	seabed_b_rs
+**
+************************************************* (0) REMOVE WARPLINE
+** *MODEL CHANGE, REMOVE, TYPE=ELEMENT
+**  elset_warpline
+**
+************************************************* (1) HOLD REF NODES
+*BOUNDARY, OP=NEW
+ seabed_ref,         1, 6
+**
+************************************************* (2) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW
+ cp_b_nd_start,      2, 2
+** cp_b_nd_start,      4, 4
+ cp_b_nd_start,      6, 6
+ cp_b_nd_end,        2, 2
+** cp_b_nd_end,        4, 4
+ cp_b_nd_end,        6, 6
+**
+************************************************* (3) FIX AXIAL DISP AT (cp) MIDDLE
+*BOUNDARY, OP=NEW
+ cp_b_nd_buckle1,    1, 1 
+**
+************************************************* (4) FIX VERTICAL POSITION OF ALL NODES
+*BOUNDARY, OP=NEW
+ cp_b_nds,           3, 4
+ fl_b_nds,           3, 4 
+**
+************************************************* (5) APPLY RC ROTATION
+*BOUNDARY, OP=NEW
+ <cp_b_nd_id_sec_8>,      6, 6, <rcm_rotation>
+ <fl_b_nd_id_sec_8>,      6, 6, <rcm_rotation>
+ <cp_b_nd_id_mid>,        6, 6, 0
+ <cp_b_nd_id_sec_14>,     6, 6, -<rcm_rotation>
+ <cp_b_nd_id_sec_14>,     6, 6, -<rcm_rotation>
+**
+************************************************* (6) OUTPUT REQUEST
+**
+*END STEP
+**
+**
+**
+** ---------------
+** --- STEP 02 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1000, NLGEOM=YES, UNSYMM=YES
+=== RELAX NODAL ROTATION ===
+*STATIC, STABILIZE=1e-7
+0.1, 1.0, 1.e-10, 1.0
+**
+**
+**
+************************************************* (0) HOLD REF NODES
+*BOUNDARY, OP=NEW
+ seabed_ref,         1, 6
+**
+************************************************* (1) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW
+ cp_b_nd_start,      2, 2
+** cp_b_nd_start,      4, 4
+ cp_b_nd_start,      6, 6
+ cp_b_nd_end,        2, 2
+** cp_b_nd_end,        4, 4
+ cp_b_nd_end,        6, 6
+**
+************************************************* (2) FIX AXIAL DISP AT (cp) MIDDLE
+*BOUNDARY, OP=NEW
+ cp_b_nd_buckle1,    1, 1 
+**
+************************************************* (3) FIX VERTICAL POSITION OF ALL NODES
+*BOUNDARY, OP=NEW
+ cp_b_nds,           3, 4
+ fl_b_nds,           3, 4 
+**
+************************************************* (4) OUTPUT REQUEST
+**
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 03 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== APPLY RESIDUAL LAY TENSION ===
+*STATIC, STABILIZE=1e-7
+0.1, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+*CONTROL, ANALYSIS=DISCONTINUOUS
+**
+**
+************************************************* (0) APPLY RLT
+*CLOAD, OP=NEW
+ cp_b_nd_start,      1, -<total_lay_tension>
+ cp_b_nd_end,        1,  <total_lay_tension>
+**
+************************************************* (1) OUTPUT REQUEST
+**
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 04 ---
+** ---------------
+**
+*STEP, INC=1000, NLGEOM=YES, UNSYMM=YES
+=== #STEP 4 LAYING FLOODED AND APPLY WEIGHT ===
+*STATIC, STABILIZE=1e-7
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+*CONTROL, ANALYSIS=DISCONTINUOUS
+**
+************************************************* (0) ACTIVATE SEABED
+** *MODEL CHANGE, ADD, TYPE=CONTACT
+** cp_b_el_cont_noRC,      seabed_b_rs
+** **cp_b_el_cont_RC,      	seabed_b_rs
+**
+************************************************* (1) ACTIVATE MODEL CHANGE
+*MODEL CHANGE, ACTIVATE
+**
+************************************************* (2) REMOVE FRICTION BETWEEN (seabed) AND (cp)
+**
+************************************************* (3) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_water_deduct>
+ fl_b_els, PI, 0.0, <fl_b_dia_in>
+ li_b_els, PE, 0.0, <fl_b_dia_in>
+ li_b_els, PI, 0.0, <li_b_dia_in>
+*END STEP
+**
+**
+** ---------------
+** --- STEP 05 ---
+** ---------------
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== #STEP 5 REMOVE CENTRALIZER SPRINGS ===
+*STATIC, STABILIZE=1e-7
+1.0, 1.0, 1.e-10, 1.0
+*MODEL CHANGE, TYPE=ELEMENT, REMOVE
+ cent_spring_els,
+*END STEP
+**
+**
+** ---------------
+** --- STEP 06 ---
+** ---------------
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== #STEP 6 RELEASE PIPE VERTICALLY AND APPLY INSTALLATION PRESSURE===
+*STATIC, STABILIZE=1e-7
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+************************************************* (0) HOLD REF NODES
+*BOUNDARY, OP=NEW, FIXED
+ seabed_ref,         1, 6
+**
+************************************************* (1) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW, FIXED
+ cp_b_nd_start,      2, 2
+ cp_b_nd_start,      4, 4
+ cp_b_nd_start,      6, 6
+ cp_b_nd_end,        2, 2
+ cp_b_nd_end,        4, 4
+ cp_b_nd_end,        6, 6
+**
+************************************************* (2) FIX AXIAL DISP AT (cp) MIDDLE
+*BOUNDARY, OP=NEW, FIXED
+ cp_b_nd_buckle1,    1, 1 
+**
+************************************************* (3) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_freshwater_deduct>
+ fl_b_els, PI, <fl_Pressure_install_int>, <fl_b_dia_in>
+ li_b_els, PE, <fl_Pressure_install_int>, <fl_b_dia_in>
+ li_b_els, PI, <fl_Pressure_install>, <li_b_dia_in>
+**
+************************************************* (3) OUTPUT REQUEST
+**
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 07 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== RELEASE AXIAL RESTRAINT AND ACTIVATE INSTALLATION CONDITIONS ===
+*STATIC, STABILIZE=1e-3
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+************************************************* (0) ACTIVATE FRICTION BETWEEN (seabed) AND (cp)
+**
+************************************************* (1) HOLD REF NODES
+*BOUNDARY, OP=NEW, FIXED
+ seabed_ref,         1, 6
+**
+************************************************* (2) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW, FIXED
+ cp_b_nd_start,      2, 2
+ cp_b_nd_start,      4, 4
+ cp_b_nd_start,      6, 6
+ cp_b_nd_end,        2, 2
+ cp_b_nd_end,        4, 4
+ cp_b_nd_end,        6, 6
+**
+************************************************* (3) OUTPUT REQUEST
+**
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 08 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== REMOVE RESIDUAL TENSION AND APPLY PIPE SELF WEIGHT ===
+*STATIC, STABILIZE=1e-7
+ 1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+************************************************* (0) HOLD REF NODES
+*BOUNDARY, OP=NEW, FIXED
+ seabed_ref,         1, 6
+**
+************************************************* (1) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW, FIXED
+ cp_b_nd_start,      1, 2
+ cp_b_nd_start,      4, 6
+ cp_b_nd_end,        1, 2
+ cp_b_nd_end,        4, 6
+**
+************************************************* (2) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_freshwater_deduct>
+ fl_b_els, PI, <fl_Pressure_install_int>, <fl_b_dia_in>
+ li_b_els, PE, <fl_Pressure_install_int>, <fl_b_dia_in>
+ li_b_els, PI, <fl_Pressure_install>, <li_b_dia_in>
+**
+************************************************* (3) REMOVE RLT
+**
+*CLOAD, OP=NEW
+ cp_b_nd_start,      1, 0.0
+ cp_b_nd_end,        1, 0.0
+**
+************************************************* (4) OUTPUT REQUEST
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 09 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== FRESHWATER FLOOD ===
+*STATIC
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_freshwater_deduct>
+ fl_b_els, PI, <Pressure_hydrostatic_int>, <fl_b_dia_in>
+ li_b_els, PE, <Pressure_hydrostatic_int>, <fl_b_dia_in>
+ li_b_els, PI, <Pressure_hydrostatic>, <li_b_dia_in>
+**
+************************************************* (1) OUTPUT REQUEST
+**
+**
+**
+*END STEP
+**
+** ---------------
+** --- STEP 10 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== APPLY HOOS ===
+*STATIC
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+************************************************* (1) HOLD REF NODES
+*BOUNDARY, OP=NEW, FIXED
+ seabed_ref,         1, 6
+**
+************************************************* (2) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW, FIXED
+ cp_b_nd_start,      2, 2
+ cp_b_nd_start,      4, 6
+ cp_b_nd_end,        2, 2
+ cp_b_nd_end,        4, 6
+************************************************* (5) APPLY LATERAL OFFSET TO (cp) AND FIX NODES +/- 50M FROM MID POINT
+*BOUNDARY, OP=NEW
+ <cp_b_nd_id_mid>,        2, 2, <cp_lat_offset>
+ <cp_b_nd_id_mid>,    1, 1
+ <cp_b_nd_id_mid>,    6, 6 
+ <cp_b_nd_id_restrain1>,  2, 2
+ <cp_b_nd_id_restrain1>,  6, 6 
+ <cp_b_nd_id_restrain2>,  2, 2
+ <cp_b_nd_id_restrain2>,  6, 6
+**
+************************************************* (1) OUTPUT REQUEST
+**
+**
+**
+*END STEP
+**
+** ---------------
+** --- STEP 11 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== RELEASE HOOS ===
+*STATIC
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+************************************************* (1) HOLD REF NODES
+*BOUNDARY, OP=NEW, FIXED
+ seabed_ref,         1, 6
+**
+************************************************* (2) FIX ROTATIONS AND LATERAL DISP AT (cp) ENDS
+*BOUNDARY, OP=NEW, FIXED
+ <cp_b_nd_id_buckle1>,    1, 1
+ <cp_b_nd_id_buckle1>,    6, 6 
+ cp_b_nd_start,      2, 2
+ cp_b_nd_start,      4, 6
+ cp_b_nd_end,        2, 2
+ cp_b_nd_end,        4, 6
+**
+************************************************* (1) OUTPUT REQUEST
+**
+**
+**
+*END STEP
+** ---------------
+** --- STEP 12 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== HYDROTEST ===
+*STATIC, STABILIZE=1e-7
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+*BOUNDARY, OP=mod, FIXED
+cp_b_nd_start, 1, 1
+cp_b_nd_end, 1, 1
+**
+** if this option is ever used, it must be put into a separate step, before step 12. Otherwise this will introduce spurious tension/compression
+**CHANGE FRICTION, INTERACTION=inter_seabed
+**FRICTION, ANISOTROPIC, ELASTIC SLIP=<elastic_slip>
+** <axial_friction_hyd>, <lateral_friction_hyd>
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_freshwater_deduct>
+ fl_b_els, PI, <fl_Pressure_hydro_int>, <fl_b_dia_in>
+ li_b_els, PE, <fl_Pressure_hydro_int>, <fl_b_dia_in>
+ li_b_els, PI, <fl_Pressure_hydro>, <li_b_dia_in>
+**
+************************************************* (1) APPLY INTERNAL TEMPERATURE TO (cp) AND (fl), INCLUDING RESIDUAL TENSION
+*TEMPERATURE, OP=NEW
+** Node set or node number, reference temperature value at the origin of the cross-section, gradient in n2-direction, gradient in n1-direction
+ cp_b_nds, <cp_temp_hydro_res_tension>
+ fl_b_nds, <fl_temp_hydro_res_tension>
+**
+************************************************* (3) OUTPUT REQUEST
+**
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 13 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== DEPRESSURIZATION AFTER HYDROTEST ===
+*STATIC, STABILIZE=1e-7
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_freshwater_deduct>
+ fl_b_els, PI, <Pressure_hydrostatic_int>, <fl_b_dia_in>
+ li_b_els, PE, <Pressure_hydrostatic_int>, <fl_b_dia_in>
+ li_b_els, PI, <Pressure_hydrostatic>, <li_b_dia_in>
+**
+************************************************* (1) APPLY INTERNAL TEMPERATURE TO (cp) AND (fl), INCLUDING RESIDUAL TENSION
+*TEMPERATURE, OP=MOD
+** Node set or node number, reference temperature value at the origin of the cross-section, gradient in n2-direction, gradient in n1-direction
+ cp_b_nds, <cp_temp_res_tension>
+ fl_b_nds, <fl_temp_res_tension>
+**
+************************************************* (2) OUTPUT REQUEST
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 14 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== DEWATER AFTER HYDROTEST ===
+*STATIC
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PZ, <fl_weight_empty_deduct>
+ fl_b_els, PI, 0, <fl_b_dia_in>
+ li_b_els, PE, 0, <fl_b_dia_in>
+ li_b_els, PI, 0, <li_b_dia_in>
+**
+************************************************* (1) APPLY INTERNAL TEMPERATURE TO (cp) AND (fl), INCLUDING RESIDUAL TENSION
+*TEMPERATURE, OP=MOD
+** Node set or node number, reference temperature value at the origin of the cross-section, gradient in n2-direction, gradient in n1-direction
+ cp_b_nds, <cp_temp_res_tension>
+ fl_b_nds, <fl_temp_res_tension>
+**
+************************************************* (2) OUTPUT REQUEST
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 15 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=1500, NLGEOM=YES, UNSYMM=YES
+=== PRODUCT FLOODED ===
+*STATIC
+1.0, 1.0, 1.e-10, 1.0
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**CHANGE FRICTION, INTERACTION=inter_seabed
+**FRICTION, ANISOTROPIC, ELASTIC SLIP=<elastic_slip>
+**<axial_friction_ope>, <lateral_friction_ope>
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+ fl_b_els, PI, <fl_Pressure_prod_int>, <fl_b_dia_in>
+ li_b_els, PE, <fl_Pressure_prod_int>, <fl_b_dia_in>
+ li_b_els, PI, <fl_Pressure_prod>, <li_b_dia_in>
+**
+************************************************* (1) OUTPUT REQUEST
+**
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 16 ---
+** ---------------
+**
+**
+** --- DESCRIPTION
+**
+**
+*STEP, INC=2000, NLGEOM=YES, UNSYMM=YES
+=== PRODUCTION DESIGN===
+*STATIC, STABILIZE=2e-5
+ 0.01, 1.0, 1.e-15, 0.1
+**
+**
+**BOUNDARY, OP=MOD, FIXED
+** cp_b_nd_buckle1,    6, 6 
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+**
+**Apply design pressure
+ fl_b_els, PI, <fl_pressure_design_int>, <fl_b_dia_in>
+ li_b_els, PE, <fl_pressure_design_int>, <fl_b_dia_in>
+ li_b_els, PI, <fl_pressure_design>, <li_b_dia_in>
+**
+************************************************* (1) APPLY INTERNAL TEMPERATURE TO (cp) AND (fl), INCLUDING RESIDUAL TENSION
+*TEMPERATURE, OP=MOD
+**Apply design temperature
+cp_b_nds, <cp_temp_design_res_tension>
+fl_b_nds, <fl_temp_design_res_tension>
+**
+************************************************* (2) OUTPUT REQUEST
+**
+*OUTPUT, FIELD, FREQUENCY=9999
+*ELEMENT OUTPUT, ELSET=cp_b_els, VARIABLE=PRESELECT
+ 3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72
+ SM, ESF1, PE, EE
+**
+*OUTPUT, FIELD, FREQUENCY=9999
+*ELEMENT OUTPUT, ELSET=fl_b_els, VARIABLE=PRESELECT
+ 3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72
+ SM, ESF1, PE, EE
+**
+*OUTPUT, FIELD, FREQUENCY=9999
+*ELEMENT OUTPUT, ELSET=li_b_els, VARIABLE=PRESELECT
+ 3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72
+ SM, ESF1, PE, EE
+**
+*END STEP
+**
+**
+** ---------------
+** --- STEP 17 ---
+** ---------------
+**
+*STEP, INC=2000, NLGEOM=YES, UNSYMM=YES
+=== OPERATION CONDITION===
+*STATIC, STABILIZE=1e-7
+ 0.01, 1.0, 1.e-15, 0.1
+**
+**
+*PRINT, CONTACT=YES, PLASTICITY=YES
+**
+**
+************************************************* (0) APPLY GRAVITY TO (cp) AND (fl)
+*DLOAD, OP=NEW
+ cp_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ fl_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ li_b_els, GRAV, <grav_amp>, 0., 0., -1.
+ cp_b_els, PB, 1.0, <cp_coat_dia_out>
+**
+**Apply production operation pressure 
+ fl_b_els, PI, <fl_pressure_oper_int>, <fl_b_dia_in>
+ li_b_els, PE, <fl_pressure_oper_int>, <fl_b_dia_in>
+ li_b_els, PI, <fl_pressure_oper>, <li_b_dia_in>
+**
+************************************************* (1) APPLY INTERNAL TEMPERATURE TO (cp) AND (fl), INCLUDING RESIDUAL TENSION
+*TEMPERATURE, OP=MOD
+**  **Apply production operation temperature
+ cp_b_nds, <cp_temp_oper_res_tension>
+ fl_b_nds, <fl_temp_oper_res_tension>
+**
+************************************************* (2) OUTPUT REQUEST
+**
+*RESTART, WRITE, FREQUENCY=1000
+**
+*END STEP
+**
+** ---------------
+** --- STEP 18 ---
+** ---------------
+**
+*AMPLITUDE, NAME=PULLOVER, DEFINITION=TABULAR, TIME=STEP TIME, VALUE=RELATIVE
+ 0.0, 0.0, <T_pFi>, 0.5, <T_pFp>, 1.0, <T_p>, 0.0, <Total_dyn_step_time>, 0.0
+** 
+*STEP, INC=500, NLGEOM=YES
+=== DYNAMIC TRAWLING LOAD ===
+*DYNAMIC, haftol=500000.0
+ <inc_step>, <Total_dyn_step_time>, 1E-10, <inc_step>
+**
+*DLOAD, OP=MOD
+**Apply fluid drag and inertia loads
+ cp_b_els, FDD, 1.0, <cp_coat_dia_out>, <Cd>, 1.0
+ cp_b_els,  FI, 1.0, <cp_coat_dia_out>, <Cm>, <Ca>
+**
+*CLOAD, OP=MOD, AMPLITUDE=PULLOVER
+ <cp_b_nd_id_pullover>, 2,  <F_pull>
+ <cp_b_nd_id_pullover>, 3,  <Fz_pull>
+**
+**
+*OUTPUT, FIELD, FREQUENCY=1
+*ELEMENT OUTPUT, ELSET=cp_b_els, VARIABLE=PRESELECT
+ 3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72
+ SM, ESF1, PE, EE
+**
+*OUTPUT, FIELD, FREQUENCY=1
+*ELEMENT OUTPUT, ELSET=fl_b_els, VARIABLE=PRESELECT
+ 3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72
+ SM, ESF1, PE, EE
+**
+*OUTPUT, FIELD, FREQUENCY=1
+*ELEMENT OUTPUT, ELSET=li_b_els, VARIABLE=PRESELECT
+ 3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,66,69,72
+ SM, ESF1, PE, EE
+** 
+*END STEP

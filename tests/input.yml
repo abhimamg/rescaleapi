@@ -1,0 +1,23 @@
+
+Job Name: Name1
+Cores: 2
+Abaqus Version: 6.14-3
+API Key: ed7021746c2ce248fc615dadd14830f49dee9510
+
+Input Files: 
+  - 01_settings.inc
+  - 02_material.inc
+  - 03_seabed.inc
+  - 04_cent_springs.inc
+  - 05_interactions.inc
+  - 06_model_definition.inc
+  - 07_trawl.inc
+  - 00_hmlt_base_case.inp
+  - ab_script.py
+  - onefric_312.o
+
+Command:
+  - abaqus job=00_hmlt_base_case.inp user=onefric_312.o cpus=2 mp_mode=mpi double=both interactive
+  - abaqus view noGUI=ab_script.py
+
+
