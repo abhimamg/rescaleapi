@@ -6,11 +6,13 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
+        'requests',
+        'strictyaml',
+        
     ],
     entry_points='''
         [console_scripts]
-        pyrescale=fastfea.landing:main
-        demo_dnv=fastfea.demo_script:dnv_check
-        
+        pyrescale=pyrescale:main
+       
     ''',
 )

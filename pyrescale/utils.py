@@ -12,8 +12,6 @@ def get_progress(job):
         time.sleep(10)
         i = i+1
 
-
-
 def tac(tic):
     tac = datetime.now() - tic
     return str(tac).split(".")[0]
