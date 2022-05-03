@@ -18,6 +18,8 @@ def main(run):
         new_job(yml)
     elif job_type=="Download":
         download(yml)
+    else:
+        Exception("Incorrect Job Type")
 
 def download(yml):
     api_key = yml["API Key"]
@@ -38,10 +40,12 @@ def new_job(yml):
     api_key = yml["API Key"]
     files = yml["Upload Files"]
     command = yml["Command"]
-    git_track = yml.get("Use Git", False)
+    use_git = eval(yml.get("Use Git", False))
+    submit = eval(yml.get("Submit", True))
     lic = yml.get("License", ["27101@10.113.36.117", "27101@172.22.20.51"])
-
     storage = pr.upload(files, api_key)
+
+    job_name = job_name + " " + message
 
     if "Rescale Files" in yml.keys():
         storage = add_files(storage=storage, rescale_files=yml["Rescale Files"], api_key=api_key)
@@ -49,10 +53,11 @@ def new_job(yml):
     job_id = pr.create(
             job_name, message, command, abq_ver, ncores, machine, storage, api_key, lic
         )
-    # pr.submit(job_id, api_key)
-    if git_track:
+    if submit:
+        pr.submit(job_id, api_key)
+    if use_git:
         os.system("git add .")
-        commit_message = f'{job_id}: {message}'
+        commit_message = f'{job_id} {message}' if message !="" else job_id
         os.system(f'git commit --allow-empty -m "{commit_message}"')
 
 
