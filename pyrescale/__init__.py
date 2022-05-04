@@ -2,7 +2,6 @@ import requests
 import json
 from strictyaml import load
 import os
-import pyrescale as pr
 import click
 from datetime import datetime
 
@@ -43,22 +42,24 @@ def new_job(yml):
     use_git = eval(yml.get("Use Git", False))
     submit = eval(yml.get("Submit", True))
     lic = yml.get("License", ["27101@10.113.36.117", "27101@172.22.20.51"])
-    storage = pr.upload(files, api_key)
+    storage = upload(files, api_key)
 
     job_name = job_name + " " + message
 
     if "Rescale Files" in yml.keys():
         storage = add_files(storage=storage, rescale_files=yml["Rescale Files"], api_key=api_key)
 
-    job_id = pr.create(
-            job_name, message, command, abq_ver, ncores, machine, storage, api_key, lic
+    job_id = create(
+            job_name, command, abq_ver, ncores, machine, storage, api_key, lic
         )
     if submit:
-        pr.submit(job_id, api_key)
+        submit(job_id, api_key)
     if use_git:
         os.system("git add .")
         commit_message = f'{job_id} {message}' if message !="" else job_id
         os.system(f'git commit --allow-empty -m "{commit_message}"')
+        if "Tag" in yml.keys():
+            for tag in yml["Tag"]: os.system(f'git tag "{tag}"')
 
 
 def submit(job_id, api_key):
@@ -92,7 +93,7 @@ def check_response(resp):
         raise Exception(json.loads(resp.content))
 
 
-def create(job_name, message, command, abq_ver, ncores, machine, storage, api_key, lic):
+def create(job_name, command, abq_ver, ncores, machine, storage, api_key, lic):
 
     abq_ver = {"6.14-3": "6.14.3-pcmpi", "2020": "2020-2038"}[abq_ver]
     machine = {"Emerald Max": "emerald_max", "Emerald": "emerald"}[machine]
@@ -101,7 +102,7 @@ def create(job_name, message, command, abq_ver, ncores, machine, storage, api_ke
         "https://platform.rescale.com/api/v2/jobs/",
         json={
             "name": job_name,
-            "description": message,
+            "description": '',
             "jobanalyses": [
                 {
                     "analysis": {"code": "abaqus", "version": abq_ver},
