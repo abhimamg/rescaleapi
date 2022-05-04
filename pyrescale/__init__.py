@@ -39,8 +39,8 @@ def new_job(yml):
     api_key = yml["API Key"]
     files = yml["Upload Files"]
     command = yml["Command"]
-    use_git = eval(yml.get("Use Git", False))
-    submit = eval(yml.get("Submit", True))
+    use_git = eval(yml.get("Use Git", "False"))
+    submt = eval(yml.get("Submit", "True"))
     lic = yml.get("License", ["27101@10.113.36.117", "27101@172.22.20.51"])
     storage = upload(files, api_key)
 
@@ -52,7 +52,7 @@ def new_job(yml):
     job_id = create(
             job_name, command, abq_ver, ncores, machine, storage, api_key, lic
         )
-    if submit:
+    if submt:
         submit(job_id, api_key)
     if use_git:
         os.system("git add .")

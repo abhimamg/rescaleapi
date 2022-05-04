@@ -1,20 +1,49 @@
 # Introduction 
-TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
+Python API for managing projects on rescale
 
 # Getting Started
-TODO: Guide users through getting your code up and running on their own system. In this section you can talk about:
-1.	Installation process
-2.	Software dependencies
-3.	Latest releases
-4.	API references
+## Create new environment
+`python -m venv %userprofile%\.virtualenvs\prs`
+or
+`conda create -n prs python=3.9`
+## Activate environment
+`%userprofile%\.virtualenvs\prs\Scripts\activate`
+or
+`conda activate prs`
+## Install whl file
+`pip install pyrescale-0.0.1-py3-none-any.whl`
 
-# Build and Test
-TODO: Describe and show how to build your code and run the tests. 
 
-# Contribute
-TODO: Explain how other users and developers can contribute to make your code better. 
+# Create YML File
+Use the sample yml file as starting point.
 
-If you want to learn more about creating good readme files then refer the following [guidelines](https://docs.microsoft.com/en-us/azure/devops/repos/git/create-a-readme?view=azure-devops). You can also seek inspiration from the below readme files:
-- [ASP.NET Core](https://github.com/aspnet/Home)
-- [Visual Studio Code](https://github.com/Microsoft/vscode)
-- [Chakra Core](https://github.com/Microsoft/ChakraCore)
+```yml
+#Input.yml
+Job Name: PROJ A
+Message: Reduced Stab to 0.1 in step 4
+API Key: xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Machine: Emerald Max
+Cores: 4
+Abaqus Version: 6.14-3
+
+Upload Files: 
+  - 01_settings.inc
+  - 02_material.inc
+  - 03_seabed.inc
+  - 04_cent_springs.inc
+  - 05_interactions.inc
+  - 06_model_definition.inc
+  - 07_trawl.inc
+  - job.inp
+  - post_process.py
+  - onefric_312.o
+
+Command:
+  - abaqus job=job user=onefric_312.o cpus=4 mp_mode=mpi double=both interactive
+  - abaqus view noGUI=post_process.py
+```
+# Execute
+Natigate to the working folder and include all the files that required to be sent to the rescale. Execute the program using
+
+`pyrescale --run input.yml`
